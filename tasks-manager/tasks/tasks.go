@@ -12,6 +12,7 @@ import (
 const (
 	TypeWelcomeEmail  = "email:welcome"
 	TypeReminderEmail = "email:reminder"
+	TypeExampleEmail = "email:example"
 )
 
 // Task payload for any email related tasks.
@@ -26,6 +27,14 @@ func NewWelcomeEmailTask(id int) (*asynq.Task, error) {
 		return nil, err
 	}
 	return asynq.NewTask(TypeWelcomeEmail, payload), nil
+}
+
+func NewExampleEmailTask(id int) (*asynq.Task, error) {
+	payload, err := json.Marshal(EmailTaskPayload{UserID: id})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeExampleEmail, payload), nil
 }
 
 func NewReminderEmailTask(id int) (*asynq.Task, error) {
