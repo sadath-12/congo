@@ -27,20 +27,33 @@ func Workers(wg *sync.WaitGroup) {
 	}
 }
 
+
 func sendWelcomeEmail(ctx context.Context, t *asynq.Task) error {
+	c := make(chan error,1)
 	var p tasks.EmailTaskPayload
-	if err := json.Unmarshal(t.Payload(), &p); err != nil {
-		return err
-	}
-	log.Printf(" [*] Send Welcome Email to User %d", p.UserID)
+	go func(){
+	 c <- json.Unmarshal(t.Payload(), &p)
+	}()
+	select{
+	case <-ctx.Done():
+		return ctx.Err()
+	case _ = <-c:
+		log.Printf(" [*] Send Welcome Email to User %d", p.UserID)
 	return nil
+	}
 }
 
 func sendReminderEmail(ctx context.Context, t *asynq.Task) error {
+c := make(chan error,1)
 	var p tasks.EmailTaskPayload
-	if err := json.Unmarshal(t.Payload(), &p); err != nil {
-		return err
-	}
-	log.Printf(" [*] Send Reminder Email to User %d", p.UserID)
+	go func(){
+	 c <- json.Unmarshal(t.Payload(), &p)
+	}()
+	select{
+	case <-ctx.Done():
+		return ctx.Err()
+	case _ = <-c:
+		log.Printf(" [*] Send Reminder Email to User %d", p.UserID)
 	return nil
+	}
 }
