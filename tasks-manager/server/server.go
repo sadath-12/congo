@@ -26,7 +26,7 @@ func middleFunc(next asynq.Handler) asynq.Handler {
 				RetryIn: time.Duration(rand.Intn(10)) * time.Second,
 			}
 		}
-		return nil
+		return next.ProcessTask(ctx, t)
 	})
 }
 
@@ -55,11 +55,20 @@ func retryDelay(n int, err error, task *asynq.Task) time.Duration {
 func Workers(wg *sync.WaitGroup) {
 	defer wg.Done()
 	srv := asynq.NewServer(
-		asynq.RedisClientOpt{Addr: "localhost:6379"},
-		asynq.Config{Concurrency: 10,
+		asynq.RedisClusterClientOpt{
+			Addrs: []string{":7000", ":7001", ":7002", ":7003", ":7004", ":7005"},
+		},
+		asynq.Config{
+			Concurrency: 10,
 			// If error is due to rate limit, don't count the error as a failure.
 			IsFailure:      func(err error) bool { return !IsRateLimitError(err) },
 			RetryDelayFunc: retryDelay,
+			Queues: map[string]int{
+				"notifications": 1,
+				"webhooks":      1,
+				"email":         1,
+				"example":       1,
+			},
 		},
 	)
 
@@ -68,9 +77,64 @@ func Workers(wg *sync.WaitGroup) {
 	mux.HandleFunc("email:welcome", sendWelcomeEmail)
 	mux.HandleFunc("email:reminder", sendReminderEmail)
 	mux.HandleFunc("example_task", sendExample)
+	mux.HandleFunc("notifications:email", handleEmailTask)
+	mux.HandleFunc("webhooks:sync", handleWebhookSyncTask)
 
 	if err := srv.Run(mux); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func handleEmailTask(ctx context.Context, t *asynq.Task) error {
+	c := make(chan error, 1)
+	var p map[string]interface{}
+	go func() {
+		c <- json.Unmarshal(t.Payload(), &p)
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-c:
+		if err != nil {
+			fmt.Println("Error:", err)
+			return err
+		}
+
+		from, ok := p["from"].(float64)
+		if !ok {
+			fmt.Println("Value not a number")
+			from = 0
+		}
+
+		to, ok := p["to"].(float64)
+		if !ok {
+			fmt.Println("Value not a number")
+			to = 0
+		}
+
+		fmt.Printf("Send email from %d to %d\n", int(from), int(to))
+		return nil
+	}
+}
+
+func handleWebhookSyncTask(ctx context.Context, t *asynq.Task) error {
+	c := make(chan error, 1)
+	var p map[string]interface{}
+	go func() {
+		c <- json.Unmarshal(t.Payload(), &p)
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case _ = <-c:
+		data, ok := p["data"].(float64)
+		if !ok {
+			fmt.Println("Value not a number")
+			data = 0
+		}
+
+		log.Printf(" [*] Send webhook to %d", int(data))
+		return nil
 	}
 }
 

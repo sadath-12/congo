@@ -20,7 +20,9 @@ func Scheduler(wg *sync.WaitGroup) {
 		panic(err)
 	}
 	scheduler := asynq.NewScheduler(
-		asynq.RedisClientOpt{Addr: "localhost:6379"},
+		asynq.RedisClusterClientOpt{
+			Addrs: []string{":7000", ":7001", ":7002", ":7003", ":7004", ":7005"},
+		},
 		&asynq.SchedulerOpts{
 			Location:            loc,
 			EnqueueErrorHandler: handleEnqueueError,
@@ -30,7 +32,7 @@ func Scheduler(wg *sync.WaitGroup) {
 	task := asynq.NewTask("example_task", nil)
 
 	// You can use "@every <duration>" to specify the interval.
-	entryID, err := scheduler.Register("@every 1s", task)
+	entryID, err := scheduler.Register("@every 1s", task,asynq.Queue("example"))
 	if err != nil {
 		log.Fatal(err)
 	}
