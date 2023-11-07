@@ -44,7 +44,6 @@ func Client(wg *sync.WaitGroup) {
 	}
 	log.Printf(" [*] Successfully enqueued task: %+v", info)
 
-	// Process the task 24 hours later.
 	info, err = client.Enqueue(t2, asynq.Queue(email))
 	if err != nil {
 		log.Fatal(err)

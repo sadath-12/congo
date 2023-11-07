@@ -20,7 +20,7 @@ var limiter = rate.NewLimiter(10, 30)
 
 func middleFunc(next asynq.Handler) asynq.Handler {
 	return asynq.HandlerFunc(func(ctx context.Context, t *asynq.Task) error {
-		fmt.Println("this is middleware")
+		fmt.Println("you have my back ❤️ just move")
 		if !limiter.Allow() {
 			return &RateLimitError{
 				RetryIn: time.Duration(rand.Intn(10)) * time.Second,
