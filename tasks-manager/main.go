@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-func main(){
+func main() {
 	var wg sync.WaitGroup
 	wg.Add(3)
 	go client.Client(&wg)
